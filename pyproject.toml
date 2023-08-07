@@ -1,0 +1,51 @@
+[tool.poetry]
+name = "contriever"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+
+[tool.poetry.dependencies]
+python = "^3.9"
+torch = {url = "https://download.pytorch.org/whl/cu111/torch-1.10.1%2Bcu111-cp39-cp39-linux_x86_64.whl", platform = "linux", python = ">=3.9 <3.10"}
+beir = "1.0.0"
+ir-datasets = "^0.5.5"
+python-terrier = "^0.9.2"
+setuptools = "^68.0.0"
+sudachipy = "^0.6.7"
+sudachidict-core = "^20230110"
+accelerate = "^0.21.0"
+transformers = "4.15.0"
+tevatron = {git = "https://github.com/texttron/tevatron.git"}
+gradcache = {git = "https://github.com/luyug/GradCache.git"}
+faiss-cpu = "1.7.2"
+datasets = "1.17.0"
+
+[[tool.poetry.source]]
+name = "torch"
+url = "https://download.pytorch.org/whl/torch/"
+secondary = true
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+black = "^23.7.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.black]
+line-length = 89
+
+[tool.mypy]
+show_error_context = true
+show_column_numbers = true
+ignore_missing_imports = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+

@@ -1,21 +1,30 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
 
-import pdb
-import os
-import time
-import sys
-import torch
-from torch.utils.tensorboard import SummaryWriter
-import logging
 import json
+
+# from torch.utils.tensorboard import SummaryWriter
+import logging
+import os
+import pdb
+import sys
+import time
+
 import numpy as np
+import torch
 import torch.distributed as dist
-from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
-
-from src.options import Options
-from src import data, beir_utils, slurm, dist_utils, utils, contriever, finetuning_data, inbatch
-
 import train
+from src import (
+    beir_utils,
+    contriever,
+    data,
+    dist_utils,
+    finetuning_data,
+    inbatch,
+    slurm,
+    utils,
+)
+from src.options import Options
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -23,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 
 def finetuning(opt, model, optimizer, scheduler, tokenizer, step):
-
     run_stats = utils.WeightedAvgStats()
 
     tb_logger = utils.init_tb_logger(opt.output_dir)
@@ -66,7 +74,10 @@ def finetuning(opt, model, optimizer, scheduler, tokenizer, step):
     while step < opt.total_steps:
         logger.info(f"Start epoch {epoch}, number of batches: {len(train_dataloader)}")
         for i, batch in enumerate(train_dataloader):
-            batch = {key: value.cuda() if isinstance(value, torch.Tensor) else value for key, value in batch.items()}
+            batch = {
+                key: value.cuda() if isinstance(value, torch.Tensor) else value
+                for key, value in batch.items()
+            }
             step += 1
 
             train_loss, iter_stats = model(**batch, stats_prefix="train")
@@ -98,7 +109,6 @@ def finetuning(opt, model, optimizer, scheduler, tokenizer, step):
                 run_stats.reset()
 
             if step % opt.eval_freq == 0:
-
                 train.eval_model(opt, eval_model, None, tokenizer, tb_logger, step)
                 evaluate(opt, eval_model, tokenizer, tb_logger, step)
 
@@ -112,6 +122,7 @@ def finetuning(opt, model, optimizer, scheduler, tokenizer, step):
                         opt.output_dir,
                         f"step-{step}",
                     )
+                    utils.save_pretrained(eval_model, opt.output_dir, f"step-{step}")
                 model.train()
 
             if step >= opt.total_steps:
@@ -147,15 +158,26 @@ def evaluate(opt, model, tokenizer, tb_logger, step):
     all_q, all_g, all_n = [], [], []
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
-            batch = {key: value.cuda() if isinstance(value, torch.Tensor) else value for key, value in batch.items()}
+            batch = {
+                key: value.cuda() if isinstance(value, torch.Tensor) else value
+                for key, value in batch.items()
+            }
 
             all_tokens = torch.cat([batch["g_tokens"], batch["n_tokens"]], dim=0)
             all_mask = torch.cat([batch["g_mask"], batch["n_mask"]], dim=0)
 
-            q_emb = model(input_ids=batch["q_tokens"], attention_mask=batch["q_mask"], normalize=opt.norm_query)
-            all_emb = model(input_ids=all_tokens, attention_mask=all_mask, normalize=opt.norm_doc)
+            q_emb = model(
+                input_ids=batch["q_tokens"],
+                attention_mask=batch["q_mask"],
+                normalize=opt.norm_query,
+            )
+            all_emb = model(
+                input_ids=all_tokens, attention_mask=all_mask, normalize=opt.norm_doc
+            )
 
-            g_emb, n_emb = torch.split(all_emb, [len(batch["g_tokens"]), len(batch["n_tokens"])])
+            g_emb, n_emb = torch.split(
+                all_emb, [len(batch["g_tokens"]), len(batch["n_tokens"])]
+            )
 
             all_q.append(q_emb)
             all_g.append(g_emb)
@@ -218,7 +240,9 @@ def main():
 
     step = 0
 
-    retriever, tokenizer, retriever_model_id = contriever.load_retriever(opt.model_path, opt.pooling, opt.random_init)
+    retriever, tokenizer, retriever_model_id = contriever.load_retriever(
+        opt.model_path, opt.pooling, opt.random_init
+    )
     opt.retriever_model_id = retriever_model_id
     model = inbatch.InBatch(opt, retriever, tokenizer)
 
