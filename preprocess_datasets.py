@@ -1,16 +1,18 @@
+import argparse
 import json
 import logging
 import sys
 from collections import defaultdict
 from pathlib import Path
-from typing import NamedTuple, Optional
+from typing import Callable, NamedTuple, Optional
 
 import ir_datasets
 import pyterrier as pt
-from negatives_miner import NegativesMiner
 from pyterrier.transformer import TransformerBase
 from sudachipy import dictionary, tokenizer
 from tqdm import tqdm
+
+from negatives_miner import NegativesMiner
 
 if not pt.started():
     pt.init()
@@ -27,11 +29,11 @@ def load_query_table(dataset: ir_datasets.Dataset) -> dict[str, str]:
     return queries_store
 
 
-def gen_tokenize_func():
+def gen_tokenize_func() -> Callable[[str], str]:
     sudachi_tokenizer = dictionary.Dictionary().create()
     mode = tokenizer.Tokenizer.SplitMode.A
 
-    def tokenize_text(text):
+    def tokenize_text(text: str) -> str:
         atok = " ".join([m.surface() for m in sudachi_tokenizer.tokenize(text, mode)])
         return atok
 
@@ -85,7 +87,7 @@ def mine_negatives(
 
 def mine_negatives_from_bm25(
     dataset: ir_datasets.Dataset, index_path: Path, num_negatives: int = 30
-):
+) -> dict[str, list]:
     negative_miner = NegativesMiner(
         dataset, num_negatives=num_negatives, tokenizer=gen_tokenize_func()
     )
@@ -129,7 +131,7 @@ def load_dataset(
 
 
 def create_example(
-    query,
+    query: str,
     positives: list[dict[str, str]],
     negatives: list[dict[str, str]],
     for_tevatron: bool = False,
@@ -220,9 +222,7 @@ def preprocess_finetuning_dataset(
     print(write_count)
 
 
-def parse_args():
-    import argparse
-
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="preprocess hf datasets")
     parser.add_argument(
         "--dataset_key",
@@ -254,9 +254,9 @@ if __name__ == "__main__":
 
     logger.info(args)
 
-    # dataset = load_dataset(dataset_key, language, set_name)
-    dataset = load_ntcir17_dataset(set_name)
-    dataset_key = "ntcir-transfer"
+    dataset = load_dataset(dataset_key, language, set_name)
+    # dataset = load_ntcir17_dataset(set_name)
+    # dataset_key = "ntcir-transfer"
 
     output_dir = Path(__file__).parent.joinpath("dataset")
     output_dir = output_dir.joinpath(dataset_key.replace("/", "_"), language)
